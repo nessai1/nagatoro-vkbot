@@ -1,15 +1,18 @@
 package main
 
 import (
+	"github.com/nessai1/nagatoro-vkbot/internal/bot"
+	"github.com/nessai1/nagatoro-vkbot/internal/config"
 	"log"
-	"net/http"
 )
 
 func main() {
-	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("good request!"))
-		log.Println("got new request!")
-	})
-	http.ListenAndServe("0.0.0.0:3232", nil)
+	cfg, err := config.ReadConfig("config.json")
+	if err != nil {
+		log.Fatalf("cannot read bot config: %v", err)
+	}
+
+	if err = bot.Run(cfg); err != nil {
+		log.Fatalf("cannot run bot: %v", err)
+	}
 }
