@@ -1,0 +1,13 @@
+{
+  "address": "0.0.0.0:3232",
+  "preprompts_dir": "./preprompts/ru",
+
+  "vk": {
+    "group_api_key": "SOME_GROUP_KEY"
+  },
+  "openai": {
+    "auth_token": "OPENAI_AUTH_TOKEN",
+    "project_id": "OPENAI_PROJECT_ID",
+    "organization": "OPENAI_ORGANIZATION_KEY"
+  }
+}
