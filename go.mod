@@ -8,7 +8,9 @@ require (
 )
 
 require (
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/sashabaranov/go-openai v1.22.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/text v0.3.3 // indirect
+	golang.org/x/text v0.13.0 // indirect
 )

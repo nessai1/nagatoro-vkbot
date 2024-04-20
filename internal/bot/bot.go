@@ -1,16 +1,24 @@
 package bot
 
 import (
+	"context"
 	"fmt"
 	"github.com/SevereCloud/vksdk/api"
-	"github.com/SevereCloud/vksdk/longpoll-user"
-	wrapper "github.com/SevereCloud/vksdk/longpoll-user/v3"
+	"github.com/SevereCloud/vksdk/callback"
+	"github.com/SevereCloud/vksdk/object"
+	"github.com/nessai1/nagatoro-vkbot/internal/ai"
 	"github.com/nessai1/nagatoro-vkbot/internal/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"log"
+	"math/rand/v2"
+	"net/http"
 	"os"
+	"strings"
+	"time"
 )
+
+const groupChatOffset = 2000000000
 
 func Run(cfg config.Config) error {
 	logger := initLogger()
@@ -36,28 +44,94 @@ func Run(cfg config.Config) error {
 type Service struct {
 	logger *zap.Logger
 	config config.Config
+
+	assistant ai.Assistant
+
+	vk *api.VK
 }
 
 func (s *Service) ListenAndServe() error {
 	s.logger.Info("Bot started!", zap.String("address", s.config.Address))
 
-	vk := api.NewVK(s.config.VK.GroupAPIKey)
-	lp, err := longpoll.NewLongpoll(vk, 12)
-	if err != nil {
-		return fmt.Errorf("cannot create longpoll: %w", err)
-	}
+	cb := callback.NewCallback()
+	cb.ConfirmationKey = "99a210d6"
 
-	w := wrapper.NewWrapper(lp)
-	w.OnNewMessage(func(m wrapper.NewMessage) {
-		s.logger.Info("Got new message", zap.String("msg", m.Text))
+	s.vk = api.NewVK(s.config.VK.GroupAPIKey)
+
+	cb.MessageNew(func(object object.MessageNewObject, i int) {
+		if object.Message.PeerID != object.Message.FromID {
+			go s.HandleChatMessage(object.Message.PeerID-groupChatOffset, object.Message)
+		} else {
+			go s.HandlePersonalMessage(object.Message)
+		}
 	})
 
-	err = lp.Run()
+	http.HandleFunc("/callback", cb.HandleFunc)
+	err := http.ListenAndServe(s.config.Address, nil)
 	if err != nil {
-		s.logger.Error("Error while run longpoll", zap.Error(err))
+		s.logger.Error("Cannot listen callback server", zap.Error(err))
+	}
+	return nil
+}
+
+func (s *Service) HandlePersonalMessage(message object.MessagesMessage) {
+	if !s.hasAssistantMention(message.Text) {
+		return
 	}
 
-	return nil
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	answer, err := s.assistant.AskPersonal(ctx, message.FromID, message.Text)
+	if err != nil {
+		s.logger.Error("Cannot ask assistant in personal chat", zap.Error(err))
+
+		return
+	}
+
+	_, err = s.vk.MessagesSend(map[string]interface{}{
+		"user_id":   message.FromID,
+		"random_id": rand.Int32(),
+		"message":   answer,
+	})
+
+	if err != nil {
+		s.logger.Error("Cannot send message to user", zap.Error(err))
+	}
+}
+
+func (s *Service) HandleChatMessage(chatID int, message object.MessagesMessage) {
+	if !s.hasAssistantMention(message.Text) {
+		return
+	}
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	answer, err := s.assistant.AskPersonal(ctx, groupChatOffset, message.Text)
+	if err != nil {
+		s.logger.Error("Cannot ask assistant in group chat", zap.Error(err))
+
+		return
+	}
+
+	_, err = s.vk.MessagesSend(map[string]interface{}{
+		"reply_to":  message.ID,
+		"chat_id":   chatID,
+		"random_id": rand.Int32(),
+		"message":   answer,
+	})
+
+	if err != nil {
+		s.logger.Error("Cannot send message to chat", zap.Error(err))
+	}
+}
+
+func (s *Service) hasAssistantMention(messageText string) bool {
+	// TODO: take mention from config
+	return strings.Contains(messageText, "[club225584757|@nagatorotoro]")
 }
 
 func initLogger() *zap.Logger {
