@@ -58,6 +58,12 @@ func (s *Service) ListenAndServe() error {
 
 	s.vk = api.NewVK(s.config.VK.GroupAPIKey)
 
+	var err error
+	s.assistant, err = ai.NewGPT4(s.config.OpenAI, "preprompts/ru")
+	if err != nil {
+		return fmt.Errorf("cannot init GPT4 assistant: %w", err)
+	}
+
 	cb.MessageNew(func(object object.MessageNewObject, i int) {
 		if object.Message.PeerID != object.Message.FromID {
 			go s.HandleChatMessage(object.Message.PeerID-groupChatOffset, object.Message)
@@ -67,20 +73,17 @@ func (s *Service) ListenAndServe() error {
 	})
 
 	http.HandleFunc("/callback", cb.HandleFunc)
-	err := http.ListenAndServe(s.config.Address, nil)
-	if err != nil {
+	if err = http.ListenAndServe(s.config.Address, nil); err != nil {
 		s.logger.Error("Cannot listen callback server", zap.Error(err))
 	}
 	return nil
 }
 
 func (s *Service) HandlePersonalMessage(message object.MessagesMessage) {
-	if !s.hasAssistantMention(message.Text) {
-		return
-	}
+	s.logger.Debug("Got personal message", zap.String("message", message.Text), zap.Int("from_id", message.FromID))
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3600*time.Second) // TODO: change timeout
 	defer cancel()
 
 	answer, err := s.assistant.AskPersonal(ctx, message.FromID, message.Text)
@@ -106,8 +109,10 @@ func (s *Service) HandleChatMessage(chatID int, message object.MessagesMessage) 
 		return
 	}
 
+	s.logger.Debug("Got chat message", zap.String("message", message.Text), zap.Int("from_id", message.FromID), zap.Int("chat_id", chatID))
+
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3600*time.Second) // TODO: change timeout
 	defer cancel()
 
 	answer, err := s.assistant.AskPersonal(ctx, groupChatOffset, message.Text)

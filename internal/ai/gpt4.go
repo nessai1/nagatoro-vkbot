@@ -131,7 +131,7 @@ func (gpt *GPT4) AskPersonal(ctx context.Context, ownerID int, text string) (str
 		return "", fmt.Errorf("cannot load thread: %w", err)
 	}
 
-	msg, err := gpt.client.CreateMessage(ctx, thread.ID, openai.MessageRequest{
+	_, err = gpt.client.CreateMessage(ctx, thread.ID, openai.MessageRequest{
 		Role:    openai.ChatMessageRoleUser,
 		Content: text,
 	})
@@ -147,15 +147,12 @@ func (gpt *GPT4) AskPersonal(ctx context.Context, ownerID int, text string) (str
 		return "", fmt.Errorf("cannot create run: %w", err)
 	}
 
-	select {
-	case <-ctx.Done():
-		return "", ctx.Err()
-	case <-time.After(5 * time.Second):
+	for {
+		<-time.After(3 * time.Second)
 		run, err = gpt.client.RetrieveRun(ctx, thread.ID, run.ID)
 		if err != nil {
-			return "", fmt.Errorf("cannot retrieve run: %w", err)
+			return "Сенпай, отвали от меня пока", nil
 		}
-
 		if run.Status == openai.RunStatusCompleted || run.Status == openai.RunStatusFailed {
 			break
 		}
@@ -163,15 +160,11 @@ func (gpt *GPT4) AskPersonal(ctx context.Context, ownerID int, text string) (str
 
 	if run.Status != openai.RunStatusCompleted {
 		return "", fmt.Errorf("run status is not completed: %s", run.Status)
-
 	}
 
-	msg, err = gpt.client.RetrieveMessage(ctx, thread.ID, msg.ID)
-	if err != nil {
-		return "", fmt.Errorf("cannot retrieve message: %w", err)
-	}
+	l, err := gpt.client.ListMessage(ctx, thread.ID, nil, nil, nil, nil)
 
-	return msg.Content[0].Text.Value, nil
+	return l.Messages[0].Content[0].Text.Value, nil
 }
 
 func (gpt *GPT4) loadThread(ctx context.Context, chatID int) (openai.Thread, error) {
