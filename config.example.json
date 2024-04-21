@@ -1,12 +1,14 @@
 {
   "address": "0.0.0.0:3232",
-  "preprompts_dir": "./preprompts/ru",
+  "preprompts_dir": "./preprompts/en",
 
   "vk": {
     "group_api_key": "SOME_GROUP_KEY",
-    "confirmation_key": "42ea1337"
+    "confirmation_key": "42ea1337",
+    "group_chat_triggers": ["Nagatoro", "Hayase", "[club1111111|@nagatoro]"]
   },
   "openai": {
-    "api_token": "OPENAI_AUTH_TOKEN"
+    "api_token": "OPENAI_AUTH_TOKEN",
+    "assistant_name": "Nagatoro"
   }
 }

@@ -83,7 +83,7 @@ func (s *Service) HandlePersonalMessage(message object.MessagesMessage) {
 	s.logger.Debug("Got personal message", zap.String("message", message.Text), zap.Int("from_id", message.FromID))
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 3600*time.Second) // TODO: change timeout
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	answer, err := s.assistant.AskPersonal(ctx, message.FromID, message.Text)
@@ -112,7 +112,7 @@ func (s *Service) HandleChatMessage(chatID int, message object.MessagesMessage) 
 	s.logger.Debug("Got chat message", zap.String("message", message.Text), zap.Int("from_id", message.FromID), zap.Int("chat_id", chatID))
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 3600*time.Second) // TODO: change timeout
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	answer, err := s.assistant.AskPersonal(ctx, groupChatOffset, message.Text)
@@ -135,8 +135,13 @@ func (s *Service) HandleChatMessage(chatID int, message object.MessagesMessage) 
 }
 
 func (s *Service) hasAssistantMention(messageText string) bool {
-	// TODO: take mention from config
-	return strings.Contains(messageText, "[club225584757|@nagatorotoro]")
+	for _, trigger := range s.config.VK.GroupChatTriggers {
+		if strings.Contains(messageText, trigger) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func initLogger() *zap.Logger {
