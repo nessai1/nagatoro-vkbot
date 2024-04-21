@@ -54,7 +54,7 @@ func (s *Service) ListenAndServe() error {
 	s.logger.Info("Bot started!", zap.String("address", s.config.Address))
 
 	cb := callback.NewCallback()
-	cb.ConfirmationKey = "99a210d6"
+	cb.ConfirmationKey = s.config.VK.ConfirmationKey
 
 	s.vk = api.NewVK(s.config.VK.GroupAPIKey)
 

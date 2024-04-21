@@ -3,11 +3,10 @@
   "preprompts_dir": "./preprompts/ru",
 
   "vk": {
-    "group_api_key": "SOME_GROUP_KEY"
+    "group_api_key": "SOME_GROUP_KEY",
+    "confirmation_key": "42ea1337"
   },
   "openai": {
-    "api_token": "OPENAI_AUTH_TOKEN",
-    "project_id": "OPENAI_PROJECT_ID",
-    "organization_id": "OPENAI_ORGANIZATION_KEY"
+    "api_token": "OPENAI_AUTH_TOKEN"
   }
 }

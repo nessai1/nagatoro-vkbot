@@ -16,13 +16,12 @@ type Config struct {
 }
 
 type VKConfig struct {
-	GroupAPIKey string `json:"group_api_key"`
+	GroupAPIKey     string `json:"group_api_key"`
+	ConfirmationKey string `json:"confirmation_key"`
 }
 
 type OpenAIConfig struct {
-	APIToken       string `json:"api_token"`
-	ProjectID      string `json:"project_id"`
-	OrganizationID string `json:"organization_id"`
+	APIToken string `json:"api_token"`
 }
 
 func ReadConfig(configPath string) (Config, error) {
